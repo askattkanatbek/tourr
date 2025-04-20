@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Вход через Telegram</title>
+</head>
+<body>
+  <h1>Войти через Telegram</h1>
+
+  <!-- 💥 Функция вызывается даже если Telegram окно закрывается сразу -->
+  <script>
+    window.TelegramLoginWidgetCallback = function(user) {
+      console.log("🔥 Вошёл через Telegram:", user);
+
+      fetch("https://c20a-46-251-204-19.ngrok-free.app/api/telegram-login/", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(user)
+      })
+      .then(res => res.json())
+      .then(data => {
+        console.log("🎟️ ACCESS TOKEN:", data.access);
+        console.log("🔁 REFRESH TOKEN:", data.refresh);
+        alert("Успешный вход! JWT: " + data.access);
+      })
+      .catch(err => console.error("❌ Ошибка:", err));
+    };
+  </script>
+
+  <!-- 👇 Telegram виджет (вызовет функцию выше) -->
+  <script async src="https://telegram.org/js/telegram-widget.js?7"
+          data-telegram-login="tourlogin_auth_bot"
+          data-size="large"
+          data-userpic="false">
+  </script>
+</body>
+</html>
