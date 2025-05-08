@@ -2,36 +2,56 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
-  <title>Вход через Telegram</title>
+  <title>Войти через Telegram</title>
+  <style>
+      body {
+          font-family: sans-serif;
+          text-align: center;
+          margin-top: 5rem;
+      }
+      code {
+          background: #f5f5f5;
+          padding: 4px 6px;
+          border-radius: 4px;
+      }
+  </style>
 </head>
 <body>
+
   <h1>Войти через Telegram</h1>
 
-  <!-- 💥 Функция вызывается даже если Telegram окно закрывается сразу -->
+  <!-- Сначала идет функция -->
   <script>
     window.TelegramLoginWidgetCallback = function(user) {
-      console.log("🔥 Вошёл через Telegram:", user);
+      console.log("✅ Получен user:", user);
 
-      fetch("https://c20a-46-251-204-19.ngrok-free.app/api/telegram-login/", {
+      fetch("https://7f3c-46-251-215-29.ngrok-free.app/api/login/telegram/", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json"
+        },
         body: JSON.stringify(user)
       })
       .then(res => res.json())
       .then(data => {
-        console.log("🎟️ ACCESS TOKEN:", data.access);
-        console.log("🔁 REFRESH TOKEN:", data.refresh);
-        alert("Успешный вход! JWT: " + data.access);
+        console.log("✅ Токены получены:", data);
+        window.location.href = "/login-success/";
       })
-      .catch(err => console.error("❌ Ошибка:", err));
+      .catch(err => {
+        console.error("❌ Ошибка:", err);
+        alert("Ошибка авторизации через Telegram");
+      });
     };
   </script>
 
-  <!-- 👇 Telegram виджет (вызовет функцию выше) -->
+  <!-- Потом идет кнопка Telegram -->
   <script async src="https://telegram.org/js/telegram-widget.js?7"
-          data-telegram-login="tourlogin_auth_bot"
+          data-telegram-login="tourlogin_bot"
           data-size="large"
-          data-userpic="false">
+          data-userpic="false"
+          data-request-access="write"
+          data-onauth="TelegramLoginWidgetCallback(user)">
   </script>
+
 </body>
 </html>

@@ -140,7 +140,7 @@ REST_FRAMEWORK = {
 
 AUTH_USER_MODEL = 'users.User'
 
-TELEGRAM_BOT_TOKEN = '8067090178:AAHTBa9weIZa02fvSqouY5zS_ipUFk-4OOM'
+TELEGRAM_BOT_TOKEN = '7743738728:AAGkaGiUO56vi6BVmTr3P3PbriJvpDDzDWk'
 
 SWAGGER_SETTINGS = {
     'SECURITY_DEFINITIONS' : {
@@ -148,6 +148,40 @@ SWAGGER_SETTINGS = {
             'type': 'apiKey',
             'name': 'Authorization',
             'in': 'header'
+        }
+    }
+}
+
+SITE_URL = 'https://8385-212-112-120-234.ngrok-free.app'
+
+from datetime import timedelta
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(days=7),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=30),
+    'ROTATE_REFRESH_TOKENS': False,
+    'BLACKLIST_AFTER_ROTATION': False,
+    'AUTH_HEADER_TYPES':('Bearer',),
+    'AUTH_TOKEN_CLASSES': ('rest_framework_simplejwt.tokens.AccessToken',),
+}
+
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'Telegram Auth API',
+    'DESCRIPTION': 'Документация для Telegram аутентификации',
+    'VERSION': '1.0.0',
+
+    'SERVE_INCLUDE_SCHEMA': False,
+
+    'COMPONENT_SPLIT_REQUEST': True,
+
+    'SECURITY': [{'BearerAuth': []}],
+
+    'COMPONENTS': {
+        'securitySchemes': {
+            'BearerAuth': {
+                'type': 'http',
+                'scheme': 'bearer',
+                'bearerFormat': 'JWT',
+            }
         }
     }
 }

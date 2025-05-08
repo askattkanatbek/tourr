@@ -12,6 +12,7 @@ class UserAdmin(BaseUserAdmin):
                 'telegram_chat_id',
 
                 'is_verified_by_telegram',
+
             )
         }),
     )
@@ -21,6 +22,7 @@ class UserAdmin(BaseUserAdmin):
         'username_telegram',
         'telegram_chat_id',
         'is_verified_by_telegram',
+        'telegram_verification_token',
     )
 
     list_filter = BaseUserAdmin.list_filter + (
@@ -30,5 +32,5 @@ class UserAdmin(BaseUserAdmin):
     search_fields = BaseUserAdmin.search_fields + (
         'telegram_id',
         'username_telegram',
-        'telegram_chat_id'
+        'telegram_chat_id',
     )

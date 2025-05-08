@@ -1,32 +1,26 @@
-"""
-URL configuration for myproject project.
-
-The `urlpatterns` list routes URLs to views. For more information please see:
-    https://docs.djangoproject.com/en/4.2/topics/http/urls/
-Examples:
-Function views
-    1. Add an import:  from my_app import views
-    2. Add a URL to urlpatterns:  path('', views.home, name='home')
-Class-based views
-    1. Add an import:  from other_app.views import Home
-    2. Add a URL to urlpatterns:  path('', Home.as_view(), name='home')
-Including another URLconf
-    1. Import the include() function: from django.urls import include, path
-    2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
-"""
 from django.contrib import admin
 from django.urls import path, include
-from rest_framework import permissions
+from django.shortcuts import render
+
+# DRF JWT
+from rest_framework_simplejwt.views import (
+    TokenObtainPairView,
+    TokenRefreshView,
+)
+
+# DRF YASG (если используешь его)
 from drf_yasg.views import get_schema_view
 from drf_yasg import openapi
-from users.views import TelegramLoginView, ResendTelegramVerificationView
-from django.views.generic import TemplateView
+from rest_framework import permissions
+
+# DRF SPECTACULAR
+from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 
 schema_view = get_schema_view(
     openapi.Info(
-        title="Telegram Auth API",
+        title="Telegram Login API",
         default_version='v1',
-        description="Авторизация и подтверждение через Telegram",
+        description="API для входа и подтверждения через Telegram",
     ),
     public=True,
     permission_classes=(permissions.AllowAny,),
@@ -34,9 +28,21 @@ schema_view = get_schema_view(
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('api/telegram-login/', TelegramLoginView.as_view(), name='telegram_login'),
-    path('login/telegram/', TemplateView.as_view(template_name = 'login_with_telegram.html')),
-    path('telegram/resend-verification', ResendTelegramVerificationView.as_view(), name = 'resend-verification'),
-    # Swagger
+
+    # JWT
+    path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
+    path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+
+    # Основное API
+    path('api/', include('users.urls')),
+
+    # Swagger (drf-yasg)
     path('swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
+
+    # Spectacular schema + Swagger (альтернатива)
+    path('schema/', SpectacularAPIView.as_view(), name='schema'),
+    path('swagger-alt/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui-alt'),
+
+    # Страница после входа
+    path('login-success/', lambda request: render(request, 'login_success.html'), name='login_success'),
 ]
