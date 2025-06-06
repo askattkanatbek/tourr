@@ -1,9 +1,12 @@
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from rest_framework.test import APIClient
 from unittest.mock import patch
 from users.models import User
 
-
+@override_settings(
+    CELERY_TASK_ALWAYS_EAGER=True,
+    CELERY_TASK_EAGER_PROPAGATES=True
+)
 class TestTelegramGetId(TestCase):
     def setUp(self):
         self.client = APIClient()
@@ -15,7 +18,7 @@ class TestTelegramGetId(TestCase):
             }
         }
 
-    @patch("users.views.requests.post")
+    @patch("users.tasks.requests.post")
     def test_getid_command_sends_correct_chat_id(self, mock_post):
         response = self.client.post('/api/telegram/webhook/', data=self.payload, format='json')
         self.assertEqual(response.status_code,200)

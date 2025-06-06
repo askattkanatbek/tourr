@@ -26,7 +26,7 @@ class VerifyTelegramTokenTests(TestCase):
 
         response = self.client.get(self.url)
         self.assertEqual(response.status_code, 200)
-        self.assertIn("уже подтвержден", response.json()["message"].lower())
+        self.assertIn("пользователь уже подтвержд", response.json()["message"].lower())
 
     def test_invalid_uuid(self):
         response = self.client.get('/api/verify-telegram/not-a-valid-uuid/')

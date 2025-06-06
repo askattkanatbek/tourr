@@ -1,0 +1,8 @@
+Django>=4.2
+djangorestframework>=3.14
+djangorestframework-simplejwt>=5.2
+requests>=2.31
+drf-yasg>=1.21
+python-dotenv>=1.0
+celery>=5.3
+redis>=5.0

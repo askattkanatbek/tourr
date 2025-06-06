@@ -1,5 +1,6 @@
 from django.shortcuts import render
-import time, requests, hmac, hashlib, uuid, json
+import logging
+import time, hmac, hashlib, uuid, json
 from django.conf import settings
 from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -15,16 +16,21 @@ from .models import User
 from .serializers import TelegramLoginSerializer, RegisterWithChatSerializer
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
-
-
-def send_message(chat_id, text):
-    return requests.post(
-        f"https://api.telegram.org/bot{settings.TELEGRAM_BOT_TOKEN}/sendMessage",
-        data={"chat_id": chat_id, "text": text}
-    )
+from users.tasks import send_telegram_message
 
 
 class TelegramLoginView(APIView):
+
+    def _get_or_create_telegram_user(self, telegram_id, username, first_name):
+        return User.objects.get_or_create(
+            telegram_id=telegram_id,
+            defaults={
+                "username_telegram": username,
+                "first_name": first_name,
+                "username": f"tg_{telegram_id}",
+            }
+        )
+
     @swagger_auto_schema(
         manual_parameters=[
             openapi.Parameter('id', openapi.IN_QUERY, type=openapi.TYPE_INTEGER, required=True, description='Telegram ID'),
@@ -46,14 +52,7 @@ class TelegramLoginView(APIView):
         first_name = data.get("first_name")
         hash_ = data.get("hash")
 
-        user, _ = User.objects.get_or_create(
-            telegram_id=telegram_id,
-            defaults={
-                "username_telegram": username,
-                "first_name": first_name,
-                "username": f"tg_{telegram_id}",
-            }
-        )
+        user, _ = self._get_or_create_telegram_user(telegram_id, username, first_name)
 
         refresh = RefreshToken.for_user(user)
         return JsonResponse({
@@ -78,21 +77,13 @@ class TelegramLoginView(APIView):
         username = serializer.validated_data['username']
         first_name = serializer.validated_data['first_name']
 
-        user, _ = User.objects.get_or_create(
-            telegram_id=telegram_id,
-            defaults={
-                "username_telegram": username,
-                "first_name": first_name,
-                "username": f"tg_{telegram_id}",
-            }
-        )
+        user, _ = self._get_or_create_telegram_user(telegram_id, username, first_name)
 
         refresh = RefreshToken.for_user(user)
         return Response({
             "access": str(refresh.access_token),
             "refresh": str(refresh)
         })
-
 
 class ResendTelegramVerificationView(APIView):
     permission_classes = [IsAuthenticated]
@@ -121,31 +112,16 @@ class ResendTelegramVerificationView(APIView):
             f"Нажми на кнопку ниже или отправь эту команду боту вручную, чтобы подтвердить аккаунт:"
         )
 
-        payload = {
-            "chat_id": user.telegram_chat_id,
-            "text": message,
-            "parse_mode": "Markdown",
-            "reply_markup": {
-                "inline_keyboard": [[
-                    {"text": "Подтвердить", "callback_data": verification_command}
-                ]]
-            }
+        reply_markup = {
+            "inline_keyboard": [[
+                {"text": "Подтвердить", "callback_data": verification_command}
+            ]]
         }
 
-        try:
-            response = requests.post(
-                f"https://api.telegram.org/bot{settings.TELEGRAM_BOT_TOKEN}/sendMessage",
-                json=payload
-            )
-            response.raise_for_status()
-        except requests.exceptions.RequestException as e:
-            return Response({"error": "Ошибка при отправке", "details": str(e)}, status=500)
+        send_telegram_message.delay(user.telegram_chat_id, message, "Markdown", reply_markup)
 
         return Response({"message": "Токен отправлен в Telegram"}, status=200)
 
-
-from drf_yasg.utils import swagger_auto_schema
-from drf_yasg import openapi
 
 @method_decorator(csrf_exempt, name='dispatch')
 class TelegramWebhookView(APIView):
@@ -176,13 +152,13 @@ class TelegramWebhookView(APIView):
             },
             required=['message']
         ),
-        responses={
-            200: openapi.Response(description="Webhook успешно обработан"),
-        }
+        responses={200: openapi.Response(description="Webhook успешно обработан")}
     )
     def post(self, request):
-        print("🔔 Webhook получен!")
-        print(json.dumps(request.data, indent=2, ensure_ascii=False))
+        logger = logging.getLogger('myproject')
+
+        logger.info("🔔 Webhook получен!")
+        logger.debug(json.dumps(request.data, indent=2, ensure_ascii=False))
 
         data = request.data
         message = data.get("message", {})
@@ -198,46 +174,46 @@ class TelegramWebhookView(APIView):
                 user = User.objects.get(telegram_id=chat_id)
                 user.telegram_chat_id = chat_id
                 user.save()
-                send_message(chat_id, "👋 Привет! Я тебя запомнил.")
+                send_telegram_message.delay(chat_id, "👋 Привет! Я тебя запомнил.")
             except User.DoesNotExist:
-                send_message(chat_id, "👋 Привет! Но я тебя пока не знаю.")
+                send_telegram_message.delay(chat_id, "👋 Привет! Но я тебя пока не знаю.")
 
         elif text.startswith("/verify"):
             parts = text.split()
             if len(parts) != 2:
-                send_message(chat_id, "❗ Неверный формат. Используй: /verify <токен>")
+                send_telegram_message.delay(chat_id, "❗ Неверный формат. Используй: /verify <токен>")
                 return JsonResponse({"ok": True})
 
             token = parts[1]
             try:
                 uuid_token = uuid.UUID(token)
             except ValueError:
-                send_message(chat_id, "❗ Неверный токен. Это не UUID.")
+                send_telegram_message.delay(chat_id, "❗ Неверный токен. Это не UUID.")
                 return JsonResponse({"ok": True})
 
             try:
                 user = User.objects.get(telegram_verification_token=uuid_token)
                 if str(user.telegram_chat_id) != str(chat_id):
-                    send_message(chat_id, "❌ Этот токен не принадлежит вам.")
+                    send_telegram_message.delay(chat_id, "❌ Этот токен не принадлежит вам.")
                     return JsonResponse({"ok": True})
 
                 if user.is_verified_by_telegram:
-                    send_message(chat_id, "✅ Вы уже подтвердили аккаунт.")
+                    send_telegram_message.delay(chat_id, "✅ Вы уже подтвердили аккаунт.")
                     return JsonResponse({"ok": True})
 
                 user.is_verified_by_telegram = True
                 user.save()
-                send_message(chat_id, "✅ Telegram-аккаунт подтвержден!")
+                send_telegram_message.delay(chat_id, "✅ Telegram-аккаунт подтвержден!")
 
             except User.DoesNotExist:
-                send_message(chat_id, "❌ Токен не найден.")
+                send_telegram_message.delay(chat_id, "❌ Токен не найден.")
 
             return JsonResponse({"ok": True})
 
         elif text.startswith("/getid"):
-            send_message(chat_id, f"🆔 Твой chat_id: {chat_id}")
+            send_telegram_message.delay(chat_id, f"🆔 Твой chat_id: {chat_id}")
         else:
-            send_message(chat_id, "🤖 Неизвестная команда. Используй /start, /verify <токен> или /getid")
+            send_telegram_message.delay(chat_id, "🤖 Неизвестная команда. Используй /start, /verify <токен> или /getid")
 
         return JsonResponse({"ok": True})
 
@@ -247,15 +223,7 @@ class MeView(APIView):
 
     @swagger_auto_schema(
         responses={
-            200: openapi.Response(description="Информация о пользователе", examples={
-                "application/json": {
-                    "id": 1,
-                    "username": "askat",
-                    "telegram_id": 123456,
-                    "telegram_chat_id": 987654,
-                    "is_verified_by_telegram": True
-                }
-            }),
+            200: openapi.Response(description="Информация о пользователе"),
             401: openapi.Response(description="Неавторизован")
         },
         operation_summary="Профиль пользователя",
@@ -295,17 +263,7 @@ class RegisterWithChatView(APIView):
             f"Отправь этот токен боту или нажми: /verify {user.telegram_verification_token}"
         )
 
-        try:
-            requests.post(
-                f"https://api.telegram.org/bot{settings.TELEGRAM_BOT_TOKEN}/sendMessage",
-                json={
-                    "chat_id": user.telegram_chat_id,
-                    "text": message,
-                    "parse_mode": "Markdown"
-                }
-            )
-        except Exception as e:
-            print("Ошибка при отправке в Telegram", e)
+        send_telegram_message.delay(user.telegram_chat_id, message)
 
         return Response({
             "message": "Пользователь создан. Токен отправлен.",
