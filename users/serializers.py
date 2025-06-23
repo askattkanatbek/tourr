@@ -25,4 +25,13 @@ class RegisterWithChatSerializer(serializers.ModelSerializer):
         )
         user.set_password(password)
         user.save()
+
+
         return user
+
+class UserAdminSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['id', 'username', 'email', 'role', 'is_active']
+        read_only_fields = ['id', 'username', 'email']
+

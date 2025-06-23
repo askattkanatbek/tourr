@@ -45,4 +45,6 @@ urlpatterns = [
 
     # Страница после входа
     path('login-success/', lambda request: render(request, 'login_success.html'), name='login_success'),
+
+    path('api/tours/', include('tours.urls')),  # чтобы не пересекалось
 ]

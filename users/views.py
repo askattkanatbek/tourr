@@ -5,7 +5,7 @@ from django.conf import settings
 from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
-from rest_framework import status
+from rest_framework import status, generics, permissions
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.decorators import api_view
 from django.http import JsonResponse
@@ -13,7 +13,7 @@ from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
 from drf_spectacular.utils import extend_schema
 from .models import User
-from .serializers import TelegramLoginSerializer, RegisterWithChatSerializer
+from .serializers import TelegramLoginSerializer, RegisterWithChatSerializer, UserAdminSerializer
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 from users.tasks import send_telegram_message
@@ -297,3 +297,19 @@ def verify_telegram_token(request, token):
 
     except (ValueError, User.DoesNotExist):
         return Response({"error": "Неверный или недействительный токен"}, status=status.HTTP_400_BAD_REQUEST)
+
+class UserListView(generics.ListAPIView):
+    serializer_class = UserAdminSerializer
+    permission_classes = [permissions.IsAdminUser]
+
+
+    def get_queryset(self):
+        role = self.request.query_params.get('role')
+        if role:
+            return User.objects.filter(role=role)
+        return User.objects.all()
+
+class UserDetailView(generics.RetrieveUpdateDestroyAPIView):
+    queryset = User.objects.all()
+    serializer_class = UserAdminSerializer
+    permission_classes = [permissions.IsAdminUser]

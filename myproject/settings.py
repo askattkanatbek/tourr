@@ -44,6 +44,7 @@ INSTALLED_APPS = [
     'users.apps.UsersConfig',
     'rest_framework',
     'drf_yasg',
+    'tours',
 ]
 
 MIDDLEWARE = [
@@ -228,3 +229,6 @@ LOGGING = {
         },
     },
 }
+from decouple import config
+
+TELEGRAM_BOT_TOKEN = config("TELEGRAM_BOT_TOKEN")
