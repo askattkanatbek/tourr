@@ -12,7 +12,7 @@ def get_admin_analytics():
         'users_by_role': user_by_role,
         'tours_by_status': tours_by_status,
         'top_categories': [
-            {'name': cat.name, 'tor_count': cat.tour_count}
+            {'name': cat.name, 'tour_count': cat.tour_count}
             for cat in top_categories
         ]
     }

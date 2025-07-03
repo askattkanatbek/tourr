@@ -1,5 +1,6 @@
 from django.db import models
 from django.conf import settings
+from django.core.exceptions import ValidationError
 import datetime
 
 
@@ -27,7 +28,13 @@ class Tour(models.Model):
     def __str__(self):
          return self.title
 
+    def clean(self):
+        if self.end_date < self.start_date:
+            raise ValidationError("Дата окончания не может быть раньше даты начала")
 
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
 
 
 class TourCategory(models.Model):

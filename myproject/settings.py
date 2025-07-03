@@ -152,7 +152,7 @@ SWAGGER_SETTINGS = {
     }
 }
 
-SITE_URL = 'https://8385-212-112-120-234.ngrok-free.app'
+SITE_URL = 'https://5365-46-251-201-56.ngrok-free.app'
 
 from datetime import timedelta
 SIMPLE_JWT = {

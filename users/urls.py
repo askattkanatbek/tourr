@@ -14,7 +14,6 @@ from django.views.generic import TemplateView
 urlpatterns = [
     path('telegram-login/', TelegramLoginView.as_view(), name='telegram_login'),
     path('telegram/resend-verification/', ResendTelegramVerificationView.as_view(), name='resend-verification'),
-    path('login/telegram/', TemplateView.as_view(template_name='login_with_telegram.html')),
     path('telegram/webhook/', TelegramWebhookView.as_view(), name='telegram-webhook'),
     path('verify-telegram/<uuid:token>/', verify_telegram_token, name='verify-telegram'),
     path('me/', MeView.as_view(), name='me'),

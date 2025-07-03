@@ -8,7 +8,7 @@ class User(AbstractUser):
 
     telegram_chat_id = models.CharField(max_length=64, null=True, blank=True)
     telegram_verification_token = models.UUIDField(default=uuid.uuid4, editable=False, blank=True, null=True)
-    is_verified_by_telegram = models.BooleanField(default=True)
+    is_verified_by_telegram = models.BooleanField(default=False)
     is_verified = models.BooleanField(default=False)
 
     class Role(models.TextChoices):

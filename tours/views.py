@@ -2,14 +2,14 @@ from rest_framework import generics, permissions, viewsets
 from .models import Tour, TourCategory
 from users.permissions import IsAdminUser
 from .serializers import TourSerializer, TourCategorySerializer
-from .permissions import IsTourCreater
+from .permissions import IsTourCreator
 from .analytics import get_admin_analytics
 from rest_framework.views import APIView
 from rest_framework.response import Response
 
 class MyToursListCreateView(generics.ListCreateAPIView):
     serializer_class = TourSerializer
-    permission_classes = [IsTourCreater]
+    permission_classes = [IsTourCreator]
 
     def get_queryset(self):
         return Tour.objects.filter(created_by=self.request.user)
@@ -20,7 +20,7 @@ class MyToursListCreateView(generics.ListCreateAPIView):
 
 class MyTourDetailView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = TourSerializer
-    permission_classes = [IsTourCreater]
+    permission_classes = [IsTourCreator]
 
     def get_queryset(self):
         return Tour.objects.filter(created_by=self.request.user)

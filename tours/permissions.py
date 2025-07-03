@@ -1,6 +1,6 @@
 from rest_framework import permissions
 
-class IsTourCreater(permissions.BasePermission):
+class IsTourCreator(permissions.BasePermission):
     """
         Доступ разрешён только пользователям с ролью 'creator'
     """

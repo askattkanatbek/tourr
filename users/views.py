@@ -45,12 +45,31 @@ class TelegramLoginView(APIView):
         operation_summary="Авторизация через Telegram (GET)",
         operation_description="Принимает параметры через URL и возвращает JWT токены."
     )
+
+
+
     def get(self, request):
         data = request.GET.copy()
+        received_hash = data.pop("hash", None)
+
+        if not received_hash:
+            return JsonResponse({"error": "Missing hash"}, status=400)
+
+        # Формируем data_check_string
+        data_dict = data.dict()
+        sorted_data = sorted(f"{k}={v}" for k, v in data_dict.items())
+        data_check_string = '\n'.join(sorted_data)
+
+        # Вычисляем HMAC-SHA256
+        secret_key = hashlib.sha256(settings.TELEGRAM_BOT_TOKEN.encode()).digest()
+        calculated_hash = hmac.new(secret_key, data_check_string.encode(), hashlib.sha256).hexdigest()
+
+        if calculated_hash != received_hash:
+            return JsonResponse({"error": "Hash mismatch"}, status=403)
+
         telegram_id = data.get("id")
         username = data.get("username")
         first_name = data.get("first_name")
-        hash_ = data.get("hash")
 
         user, _ = self._get_or_create_telegram_user(telegram_id, username, first_name)
 
@@ -59,6 +78,8 @@ class TelegramLoginView(APIView):
             "access": str(refresh.access_token),
             "refresh": str(refresh)
         })
+
+
 
     @swagger_auto_schema(
         request_body=TelegramLoginSerializer,
@@ -161,13 +182,16 @@ class TelegramWebhookView(APIView):
         logger.debug(json.dumps(request.data, indent=2, ensure_ascii=False))
 
         data = request.data
-        message = data.get("message", {})
+
+        message = data.get("message") or data.get("edited_message") or {}
         chat = message.get("chat", {})
         text = message.get("text", "")
         chat_id = chat.get("id")
 
         if not text:
-            return JsonResponse({"ok": True})
+            return JsonResponse({"ok": True})  # просто молча отвечаем
+
+        # ... остальная логика
 
         if text.startswith("/start"):
             try:

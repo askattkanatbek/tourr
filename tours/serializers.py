@@ -14,3 +14,9 @@ class TourCategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = TourCategory
         fields = '__all__'
+
+
+def validate(self, data):
+    if data['end_date'] < data['start_date']:
+        raise serializers.ValidationError("Дата окончания не может быть раньше даты начала")
+    return data
